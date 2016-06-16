@@ -1,0 +1,16 @@
+---
+# defaults file for java
+
+## Select which variant to use.
+## Could be: jdk6, jre6,
+##           jdk7, jre7,
+##           jdk8, jre8,
+##
+## These variables will be set, or overwritten if you like:
+## - java_edition
+## - java_version
+## - java_update
+## By default latest version will be selected.
+## See: http://www.oracle.com/technetwork/java/javase/versioning-naming-139433.html
+java_variant: jdk8
+

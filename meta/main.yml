@@ -1,0 +1,24 @@
+galaxy_info:
+  author: jeffhung
+  description: Ansible playbook for installing Java SE on CentOS/Debian Linux
+  license: BSD
+
+  min_ansible_version: 2.0
+
+  platforms:
+  - name: EL
+    versions:
+     - 6
+  - name: Ubuntu
+    versions:
+     - trusty
+
+  galaxy_tags:
+    - development
+    - system
+    - java
+    - jdk
+    - jvm
+
+dependencies: []
+

@@ -1,0 +1,9 @@
+key,edition,release,update,build
+jdk8,jdk,8,92,14
+jdk8,jdk,8,91,14
+jdk7,jdk,7,80,15
+jdk6,jdk,6,45,06
+jre8,jre,8,92,14
+jre8,jre,8,91,14
+jre7,jre,7,80,15
+jre6,jre,6,45,06

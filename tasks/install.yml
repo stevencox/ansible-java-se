@@ -1,0 +1,222 @@
+---
+
+# ----------------------------------------------------------------------------
+
+- debug: var=java_variant
+
+# TODO: Maybe we could do this with loops instead of lookup().
+#       See: http://docs.ansible.com/ansible/playbooks_loops.html
+
+- name:  Set java_edition
+  set_fact:  java_edition={{ lookup('csvfile', '{{ java_variant }} col=1 file=versions.csv delimiter=,') }}
+  when:      java_edition is not defined
+- debug: var=java_edition
+
+- name:  Set java_version
+  set_fact:  java_version={{ lookup('csvfile', '{{ java_variant }} col=2 file=versions.csv delimiter=,') }}
+  when:      java_version is not defined
+- debug: var=java_version
+
+- name:  Set java_update
+  set_fact:  java_update={{ lookup('csvfile', '{{ java_variant }} col=3 file=versions.csv delimiter=,') }}
+  when:      java_update is not defined
+- debug: var=java_update
+
+- name:  Set java_build
+  set_fact:  java_build={{ lookup('csvfile', '{{ java_variant }} col=4 file=versions.csv delimiter=,') }}
+- debug: var=java_build
+
+- name:  Set java_packaging
+  set_fact:
+    java_packaging: rpm
+    java_dir_name: "{{ java_edition }}1.{{ java_version }}.0_{{ java_update }}"
+  when: ansible_pkg_mgr == 'yum'
+- name:  Set java_packaging
+  set_fact:
+    java_packaging: tar.gz
+    java_dir_name: "{{ java_edition }}1.{{ java_version }}.0_{{ java_update }}"
+  when: ansible_pkg_mgr != 'yum'
+- debug: var=java_packaging
+- debug: var=java_dir_name
+
+# ----------------------------------------------------------------------------
+
+- name: Set java_home_base on Debian
+  set_fact:
+    java_home_base: /usr/lib/jvm
+    java_link_name: default-java
+  when: ansible_os_family == "Debian"
+
+- name: Set java_home_base on non-Debian
+  set_fact:
+    java_home_base: /usr/java
+    java_link_name: default
+  when: ansible_os_family != "Debian"
+- debug: var=java_home_base
+
+# ----------------------------------------------------------------------------
+
+- name: Set java_package_file
+  set_fact:
+    java_package_file: "{{ java_edition }}-{{ java_version }}u{{ java_update }}-linux-x64.{{ java_packaging }}"
+- debug: var=java_package_file
+
+- block:
+
+  - name: Alter java_package_file if rpm packaged as .bin
+    set_fact:
+      java_package_file: "{{ java_package_file | regex_replace('.rpm$', '-rpm.bin') }}"
+    when: java_packaging == 'rpm'
+  
+  - name: Alter java_package_file if tar.gz packaged as .bin
+    set_fact:
+      java_package_file: "{{ java_package_file | regex_replace('.tar.gz$', '.bin') }}"
+    when: java_packaging == 'tar.gz'
+
+  when: java_version == '6'
+
+- name: Set java_package_url
+  set_fact:
+    java_package_url: "{{ java_url_base }}/{{ java_version }}u{{ java_update}}-b{{ java_build }}/{{ java_package_file }}"
+- debug: var=java_package_url
+
+# ----------------------------------------------------------------------------
+
+# TODO: avoid hard-code /vagrant
+- name: Fetch java package
+  get_url:
+    url: "{{ java_package_url }}"
+    headers: "Cookie:oraclelicense=accept-securebackup-cookie"
+    dest: "/vagrant/{{ java_package_file }}"
+  register: fetch_result
+- debug: var=fetch_result
+
+# ----------------------------------------------------------------------------
+
+- block:
+
+  # TODO: What if this is x86 version?
+  - name: Set java_rpm_file if rpm packaged as .bin
+    set_fact:
+      java_rpm_file:   "{{ java_package_file | regex_replace('-x64-rpm.bin$', '-amd64.rpm') }}"
+  - debug: var=java_rpm_file
+
+  # TODO: avoid hard-code /vagrant
+  - name: Extract -rpm.bin file if necessary
+    #ignore_errors: yes
+    command: "sh /vagrant/{{ java_package_file }}"
+    args:
+      creates: "~/{{ java_rpm_file }}"
+    register: extract_result
+  - debug: var=extract_result
+
+  - name: Cache extracted RPM file
+    command: "cp '~/{{ java_rpm_file }}' /vagrant/"
+    args:
+      creates: "/vagrant/{{ java_rpm_file }}"
+    register: cache_extracted_result
+  - debug: var=cache_extracted_result
+
+  - name: Alter java_package_file
+    set_fact:
+      java_package_file: "{{ java_rpm_file }}"
+  - debug: var=java_package_file
+
+  when: java_version == '6' and java_packaging == 'rpm'
+
+- block:
+
+  # TODO: avoid hard-code /vagrant
+  - name: Extract .bin file if necessary
+    #ignore_errors: yes
+    command: "sh /vagrant/{{ java_package_file }}"
+    args:
+      creates: "~/{{ java_dir_name }}"
+    register: extract_result
+  - debug: var=extract_result
+
+  - name: Alter java_package_file
+    set_fact:
+      java_package_file: "{{ java_package_file | regex_replace('.bin$', '.tar.gz') }}"
+  - debug: var=java_package_file
+
+  - name: Cache extracted RPM file
+    command: "tar zcvf '/vagrant/{{ java_package_file }}' '{{ java_dir_name }}'"
+    args:
+      creates: "/vagrant/{{ java_package_file }}"
+    register: cache_extracted_result
+  - debug: var=cache_extracted_result
+
+  when: java_version == '6' and java_packaging == 'tar.gz'
+
+- debug: var=java_package_file
+
+# ----------------------------------------------------------------------------
+
+- name: Install java from RPM
+  yum:
+    state: present
+    name: "/vagrant/{{ java_package_file }}"
+  become: true
+  when: ansible_pkg_mgr == "yum" and java_packaging == 'rpm'
+
+# ----------------------------------------------------------------------------
+
+- block:
+
+  - name: mkdir {{ java_home_base }}
+    file:
+      path: "{{ java_home_base }}"
+      state: directory
+      owner: root
+      group: root
+      mode: "u=rwx,go=rx"
+
+  - name: Install java from tarball
+    unarchive:
+      src: "/vagrant/{{ java_package_file }}"
+      dest: "{{ java_home_base }}"
+      owner: root
+      group: root
+      mode: "go-w"
+      copy: no
+
+  become: true
+  when: ansible_pkg_mgr != "yum" and java_packaging == 'tar.gz'
+
+# ----------------------------------------------------------------------------
+
+- block:
+
+  - name: link "{{ java_home_base }}/{{ java_link_name }}"
+    file:
+      dest: "{{ java_home_base }}/{{ java_link_name }}"
+      src:  "{{ java_home_base }}/{{ java_dir_name }}"
+      state: link
+
+  - name: alternatives link for "java"
+    alternatives:
+      name: java
+      link: /usr/bin/java
+      path: "{{ java_home_base }}/{{ java_link_name }}/bin/java"
+
+  - name: alternatives link for "javac"
+    alternatives:
+      name: javac
+      link: /usr/bin/javac
+      path: "{{ java_home_base }}/{{ java_link_name }}/bin/javac"
+    when: java_edition == 'jdk'
+
+  - name: alternatives link for "jar"
+    alternatives:
+      name: jar
+      link: /usr/bin/jar
+      path: "{{ java_home_base }}/{{ java_link_name }}/bin/jar"
+    when: java_edition == 'jdk'
+
+  become: true
+  when: ansible_os_family == "Debian"
+
+# ----------------------------------------------------------------------------
+
+
