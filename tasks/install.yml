@@ -176,6 +176,7 @@
     unarchive:
       src: "/vagrant/{{ java_package_file }}"
       dest: "{{ java_home_base }}"
+      creates: "{{ java_home_base }}/{{ java_dir_name }}/bin/java"
       owner: root
       group: root
       mode: "go-w"
