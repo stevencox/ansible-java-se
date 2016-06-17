@@ -12,7 +12,7 @@ Execute this playbook directly:
 
 	ansible-playbook $roles_path/jeffhung.java-se/tasks/install.yml
 
-Or include as a rolw:
+Or include as a role:
 
 	- hosts: default
 	  roles:
