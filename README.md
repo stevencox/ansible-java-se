@@ -1,4 +1,4 @@
-# Ansible Playbook: jeffhung.java-se
+# Ansible Role: jeffhung.java-se
 
 Ansible playbook for installing Java SE on CentOS/Debian Linux
 
