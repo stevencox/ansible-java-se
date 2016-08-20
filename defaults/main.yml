@@ -14,3 +14,7 @@
 ## See: http://www.oracle.com/technetwork/java/javase/versioning-naming-139433.html
 java_variant: jdk8
 
+## Cache directory for holding downloaded/generated files.
+## The default is /vagrant/files so cache persist between boxes.
+java_cache_dir: /vagrant/files
+

@@ -82,12 +82,11 @@
 
 # ----------------------------------------------------------------------------
 
-# TODO: avoid hard-code /vagrant
 - name: Fetch java package
   get_url:
     url: "{{ java_package_url }}"
     headers: "Cookie:oraclelicense=accept-securebackup-cookie"
-    dest: "/vagrant/{{ java_package_file }}"
+    dest: "{{ java_cache_dir }}/{{ java_package_file }}"
   register: fetch_result
 - debug: var=fetch_result
 
@@ -101,19 +100,18 @@
       java_rpm_file:   "{{ java_package_file | regex_replace('-x64-rpm.bin$', '-amd64.rpm') }}"
   - debug: var=java_rpm_file
 
-  # TODO: avoid hard-code /vagrant
   - name: Extract -rpm.bin file if necessary
     #ignore_errors: yes
-    command: "sh /vagrant/{{ java_package_file }}"
+    command: "sh {{ java_cache_dir }}/{{ java_package_file }}"
     args:
       creates: "~/{{ java_rpm_file }}"
     register: extract_result
   - debug: var=extract_result
 
   - name: Cache extracted RPM file
-    command: "cp '~/{{ java_rpm_file }}' /vagrant/"
+    command: "cp '~/{{ java_rpm_file }}' {{ java_cache_dir }}/"
     args:
-      creates: "/vagrant/{{ java_rpm_file }}"
+      creates: "{{ java_cache_dir }}/{{ java_rpm_file }}"
     register: cache_extracted_result
   - debug: var=cache_extracted_result
 
@@ -126,10 +124,9 @@
 
 - block:
 
-  # TODO: avoid hard-code /vagrant
   - name: Extract .bin file if necessary
     #ignore_errors: yes
-    command: "sh /vagrant/{{ java_package_file }}"
+    command: "sh {{ java_cache_dir }}/{{ java_package_file }}"
     args:
       creates: "~/{{ java_dir_name }}"
     register: extract_result
@@ -141,9 +138,9 @@
   - debug: var=java_package_file
 
   - name: Cache extracted RPM file
-    command: "tar zcvf '/vagrant/{{ java_package_file }}' '{{ java_dir_name }}'"
+    command: "tar zcvf '{{ java_cache_dir }}/{{ java_package_file }}' '{{ java_dir_name }}'"
     args:
-      creates: "/vagrant/{{ java_package_file }}"
+      creates: "{{ java_cache_dir }}/{{ java_package_file }}"
     register: cache_extracted_result
   - debug: var=cache_extracted_result
 
@@ -156,7 +153,7 @@
 - name: Install java from RPM
   yum:
     state: present
-    name: "/vagrant/{{ java_package_file }}"
+    name: "{{ java_cache_dir }}/{{ java_package_file }}"
   become: true
   when: ansible_pkg_mgr == "yum" and java_packaging == 'rpm'
 
@@ -174,7 +171,7 @@
 
   - name: Install java from tarball
     unarchive:
-      src: "/vagrant/{{ java_package_file }}"
+      src: "{{ java_cache_dir }}/{{ java_package_file }}"
       dest: "{{ java_home_base }}"
       creates: "{{ java_home_base }}/{{ java_dir_name }}/bin/java"
       owner: root
