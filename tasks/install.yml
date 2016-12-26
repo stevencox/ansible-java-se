@@ -219,7 +219,7 @@
     when: java_edition == 'jdk'
 
   become: true
-  when: ansible_os_family != "Darwin"
+  when: ansible_os_family == 'Debian'
 
 # ----------------------------------------------------------------------------
 
