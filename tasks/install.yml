@@ -82,6 +82,12 @@
 
 # ----------------------------------------------------------------------------
 
+- name: mkdir {{ java_cache_dir }}
+  file:
+    path: "{{ java_cache_dir }}"
+    state: directory
+    mode: "u=rwx,go=rx"
+
 - name: Fetch java package
   get_url:
     url: "{{ java_package_url }}"
