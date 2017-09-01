@@ -7,8 +7,12 @@
 # TODO: Maybe we could do this with loops instead of lookup().
 #       See: http://docs.ansible.com/ansible/playbooks_loops.html
 
+- debug: msg="{{ playbook_dir }}"
+#- debug: msg={{ lookup('csvfile', java_variant + ' col=1 file=versions.csv delimiter=,') }}
+
 - name:  Set java_edition
-  set_fact:  java_edition={{ lookup('csvfile', '{{ java_variant }} col=1 file=versions.csv delimiter=,') }}
+#  set_fact:  java_edition={{ lookup('csvfile', '{{ java_variant }} col=1 file=versions.csv delimiter=,') }}
+  set_fact:  java_edition="{{ lookup('csvfile', 'jdk8 col=1 file=versions.csv delimiter=,') }}"
   when:      java_edition is not defined
 - debug: var=java_edition
 
@@ -24,6 +28,7 @@
 
 - name:  Set java_build
   set_fact:  java_build={{ lookup('csvfile', '{{ java_variant }} col=4 file=versions.csv delimiter=,') }}
+  when:      java_build is not defined
 - debug: var=java_build
 
 - name:  Set java_packaging
@@ -89,6 +94,7 @@
     mode: "u=rwx,go=rx"
 
 - name: Fetch java package
+  environment: "{{proxy_env}}"
   get_url:
     url: "{{ java_package_url }}"
     headers: "Cookie:oraclelicense=accept-securebackup-cookie"
