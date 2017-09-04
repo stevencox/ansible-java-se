@@ -94,7 +94,6 @@
     mode: "u=rwx,go=rx"
 
 - name: Fetch java package
-  environment: "{{proxy_env}}"
   get_url:
     url: "{{ java_package_url }}"
     headers: "Cookie:oraclelicense=accept-securebackup-cookie"
